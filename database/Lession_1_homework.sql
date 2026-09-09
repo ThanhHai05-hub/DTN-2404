@@ -12,6 +12,7 @@ create table if not exists positions(
 	position_id int primary key auto_increment,
     position_name varchar(50)
 );
+-- position_name đúng hơn là : enum("Dev", "Test", "Scrum Master", "PM")
 
 create table if not exists accounts (
 	account_id int primary key auto_increment,
@@ -24,6 +25,10 @@ create table if not exists accounts (
     foreign key (department_id) references department(department_id),
     foreign key (position_id) references positions(position_id)
     
+    -- on update cascade on delete cascade
+    -- viết sau foreign key để khi xóa phòng ban thì nhân viên cũng bị xóa theo hoặc khi cập nhật phòng ban thì bên bảng nhân viên cũng được cập nhật theo
+    -- cha làm gì thì con làm vậy 
+    
     
 );
 
@@ -34,6 +39,7 @@ create table if not exists groupss(
     create_date date, 
     foreign key (create_id) references accounts(account_id)
 );
+-- group là một từ khóa trong mysql nên muốn nó làm tên bảng thì viết nó trong một cặp nháy huyền `group`
 
 create table if not exists group_account(
 	group_id int primary key ,
@@ -41,6 +47,14 @@ create table if not exists group_account(
     joint_date date,
     foreign key (account_id) references accounts(account_id)
 );
+-- đối với bảng này phải sử dụng group_id và account_id làm khóa chính 
+-- ví dụ: 
+-- group_id		account_id		joint_date
+--  1				2				2024
+-- 1				3				2023
+--  1				1				2034 (vô lý) 
+-- như vậy group_id không thể làm khóa chính trong trường hợp này. khóa chính phải là group_id và account_id
+-- một nhân viên có thể tham gia nhiều nhóm và một nhóm có thể có nhiều nhân viên
 
 create table if not exists type_question (
 	type_id int primary key auto_increment,
@@ -92,7 +106,7 @@ create table if not exists  exam_question(
     foreign key (question_id) references question(question_id)
 );
 
-
+-- 1 bài thi có thể có nhiều câu hỏi nên phải sử dụng khóa chính là exam_id và question_id
 
 
 
