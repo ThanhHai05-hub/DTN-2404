@@ -287,22 +287,228 @@ delimiter ;
 
 -- Question 3: Cấu hình 1 group có nhiều nhất là 5 user
 
+drop trigger if exists trigger_as_3;
+delimiter $$
+create trigger trigger_as_3
+before insert on group_account
+for each row
+begin 
+	declare  count_emp int;
+    
+    with c1 as (select group_id, count(account_id) as count_employee
+	from group_account 
+	group by group_id) 
+    
+    select count_employee into count_emp
+                            from c1
+                            where group_id = new.group_id  ;
+	
+     
+    
+    if count_emp >= 5 then 
+		signal sqlstate "12345"
+        set message_text = "Số lượng nhân viên tối đa là 5";
+    end if;
+end $$
+delimiter ;
+
+-- test 
+insert into group_account(group_id, account_id)
+					values (7, 5);
+
+-- Question 4: Cấu hình 1 bài thi có nhiều nhất là 10 Question
+
+drop trigger if exists trigger_as_4;
+delimiter $$
+create trigger trigger_as_4
+before insert on exam_question
+for each row
+begin 
+	declare v_count_question int;
+    select count(question_id) into v_count_question
+	from exam_question
+	where exam_id = new.exam_id;
+    
+    if v_count_question >=10 then 
+		signal sqlstate '12345'
+        set message_text = "1 bài thi có nhiều nhất là 10 Question";
+    end if;
+end $$
+delimiter ;
 
 
 
+-- question 5: Tạo trigger không cho phép người dùng xóa tài khoản có email là
+-- admin@gmail.com 
+
+drop trigger if exists trigger_as_5;
+delimiter $$
+create trigger trigger_as_5
+before delete on `account`
+for each row
+begin 
+	if old.email = "admin@gmail.com" then 
+		signal sqlstate '12345'
+        set message_text = "Không được phép xóa tài khoản";
+    end if;
+end $$
+delimiter ;
 
 
+-- Question 6: Không sử dụng cấu hình default cho field DepartmentID của table
+-- Account, hãy tạo trigger cho phép người dùng khi tạo account không điền
+-- vào departmentID thì sẽ được phân vào phòng ban "waiting Department"
 
 
+drop trigger if exists trigger_as_6;
+delimiter $$
+create trigger trigger_as_6
+before insert  on `account`
+for each row
+begin 
+	if new.department_id is null  then 
+		set new.department_id = (select department_id
+							from department 
+                            where department_name = "waiting Department");
+    end if;
+end $$
+delimiter ;
 
 
+-- Question 7: Cấu hình 1 bài thi chỉ cho phép user tạo tối đa 4 answers cho mỗi
+-- question, trong đó có tối đa 2 đáp án đúng.
+drop trigger if exists trigger_as_7;
+delimiter $$
+create trigger trigger_as_7
+before delete  on exam 
+for each row
+begin 
+	declare count_answer int;
+    declare count_answer_iscorect int;
+	select count(question_id) into count_answer
+    from answer
+    where question_id = old.question_id;
+    
+    if count_answer >=4 then 
+    signal sqlstate '12345'
+	set message_text = "tối đa 4 câu hỏi cho mỗi question";
+    end if;
+    
+    select count(question_id) into count_answer_iscorect
+    from answer
+    where question_id = old.question_id and iscorect = true;
+    
+	if count_answer_iscorect >=2 then 
+    signal sqlstate '12345'
+	set message_text = "tối đa 2 câu trả lời đúng cho mỗi question";
+    end if;
+    
+    
+end $$
+delimiter ;
+
+-- Question 9: Viết trigger không cho phép người dùng xóa bài thi mới tạo được 2 ngày
+drop trigger if exists trigger_as_9;
+
+delimiter $$
+create trigger trigger_as_9
+before delete  on exam 
+for each row
+begin 
+	if old.created_date >= current_date() - interval 2 day
+    then signal sqlstate '12345'
+        set message_text = "Không được phép xóa bài thi";
+	end if;
+end $$
+delimiter ;
+
+-- Question 10: Viết trigger chỉ cho phép người dùng chỉ được update, delete các
+-- question khi question đó chưa nằm trong exam nào
+
+select question_id 
+from  exam_question;
+drop trigger if exists trigger_as_10_delete;
+delimiter $$
+create trigger trigger_as_10_delete
+before delete  on question
+for each row
+begin 
+	if old.question_id in (select question_id 
+						from  exam_question) 
+	then signal sqlstate '12345'
+        set message_text = "Question đã nằm trong exam";
+	end if;
+                        
+end %%
+delimiter ;
 
 
+select question_id 
+from  exam_question;
+drop trigger if exists trigger_as_10_update;
+delimiter $$
+create trigger trigger_as_10_update
+before update on question
+for each row
+begin 
+	if old.question_id in (select question_id 
+						from  exam_question) 
+	then signal sqlstate '12345'
+        set message_text = "Question đã nằm trong exam";
+	end if;
+                        
+end %%
+delimiter ;
 
 
+-- Question 12: Lấy ra thông tin exam trong đó:
+-- Duration <= 30 thì sẽ đổi thành giá trị "Short time"
+-- 30 < Duration <= 60 thì sẽ đổi thành giá trị "Medium time"
+-- Duration > 60 thì sẽ đổi thành giá trị "Long time"
 
 
+select *,
+	case
+    
+		when duration <= 30 then 'Short time' 
+		when duration <= 60  then 'Medium time' 
+        else 'Long time'
+    end as duration_type
+from exam ;
 
+    
+-- Question 13: Thống kê số account trong mỗi group và in ra thêm 1 column nữa có tên
+-- là the_number_user_amount và mang giá trị được quy định như sau:
+-- Nếu số lượng user trong group =< 5 thì sẽ có giá trị là few
+-- Nếu số lượng user trong group <= 20 và > 5 thì sẽ có giá trị là normal
+-- Nếu số lượng user trong group > 20 thì sẽ có giá trị là higher
+
+with c1 as (select `group`.*, count(account_id) as SoLuongNhanVien
+from `group`
+left join group_account using (group_id)
+group by group_id )
+
+select *, 
+	case 
+		when SoLuongNhanVien <= 5 then 'few'
+        when SoLuongNhanVien <= 20  then 'normal'
+        else 'higher'
+    end as the_number_user_amount
+from c1;
+	 
+-- Question 14: Thống kê số mỗi phòng ban có bao nhiêu user, nếu phòng ban nào
+-- không có user thì sẽ thay đổi giá trị 0 thành "Không có User"
+with c1 as (select department.*, count(account_id) as countNV
+from department
+left join `account` using (department_id)
+group by department_id)
+
+select department_name, 
+	case
+		when countNV = 0 then "Không có User"
+        else countNV
+	end as SoLuongNhanVien
+from c1;
 
 
 

@@ -63,6 +63,49 @@ insert into group_account (group_id, account_id, joined_date)
 					values (7 , 2, "2030-09-27");
 
 
+-- case when 
+set @month = 2;
+select 
+	case 
+		when @month in (4,6,9,11) then "30 ngày"
+        when @month =2 then "28 hoặc 29  ngày"
+		else"30 ngày"
+	end as count_day;
+
+
+
+
+-- distinct: phân biệt 
+-- nếu in ra tất cả các giá trị khác nhau, và chỉ in giá trị đó đúng một lần 
+select distinct duration 
+from exam;
+
+-- index : Chỉ mục (giống như mục lục của một quyển sách)
+-- index hoạt động giống như một cây và đi từng tầng từ đó loại bỏ được rất nhiều bước đi thừa thãi
+-- một thao tác lặp đi lặp lại mới cân nhắc sử dụng chỉ mục và chỉ mục sẽ tốn bộ nhớ
+-- nếu insert/delete/update thì chưa chắc nhanh hơn vì phải thiết lập lại index, thiết lập lại cây...
+-- vd: tạo chỉ mục cho cột department_name
+
+create index index_department_name
+on department (department_name); 
+
+select *
+from department 
+where department_name = "sale";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
